@@ -1,6 +1,7 @@
 ---
-title: "A_6"
+title: "East Boston Demographics"
 output: html_document
+author: Naomi, Abdul 
 ---
 
 ```{r setup, include=FALSE}
@@ -66,6 +67,7 @@ acs_vars <- load_variables(2017, "acs5")
 v17 <- load_variables(2017, "acs5", cache = TRUE)
 ```
 
+##Latinx Population in East Boston (Interactive)
 
 ```{r}
 MA_latinx_palette <- colorNumeric(c("lightpink", "yellow"), boston_latinx$pct_latinx)
@@ -87,7 +89,7 @@ latinx_map1 <- leaflet(boston_latinx) %>%
 latinx_map1
 ```
 
-
+##Latinx Population (Static Map)
 ```{r}
 MA_state_plane <- "+proj=lcc +lat_1=42.68333333333333 +lat_2=41.71666666666667 +lat_0=41 +lon_0=-71.5 +x_0=200000.0001016002 +y_0=750000 +ellps=GRS80 +datum=NAD83 +to_meter=0.3048006096012192 +no_defs"
 
