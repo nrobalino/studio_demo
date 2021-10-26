@@ -8,23 +8,6 @@ author: Naomi, Abdul
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
@@ -60,14 +43,14 @@ boston_latinx <- boston_latinx %>%
 
 
 ```{r}
-acs_vars <- load_variables(2017, "acs5")
+acs_vars <- load_variables(2019, "acs5")
 ```
 
 ```{r}
-v17 <- load_variables(2017, "acs5", cache = TRUE)
+v19 <- load_variables(2019, "acs5", cache = TRUE)
 ```
 
-##Latinx Population in East Boston (Interactive)
+##Latinx Population in East Boston (Interactive) - Census Blocks
 
 ```{r}
 MA_latinx_palette <- colorNumeric(c("lightpink", "yellow"), boston_latinx$pct_latinx)
@@ -106,6 +89,119 @@ ggplot(boston_latinx) +
 ```
 
 ```{r}
-saveWidget(latinx_map1, file="Robalino_Assignment_6.html")
+saveWidget(latinx_map1, file="latinx_map_TRACT.html")
+```
+
+##
+
+```{r}
+boston_latinx <- get_decennial(geography = "block",
+                          state = "MA", county = "suffolk",
+                          year = 2010,
+                          output = "wide",
+                          variables = c(tot_pop = 'P004001',
+                                        la_pop = 'P004003'),
+                          geometry = TRUE)
+
+boston_latinx <- boston_latinx %>%
+  mutate(pct_latinx = la_pop / tot_pop) %>%
+  filter(tot_pop > 0)
+```
+
+##Latinx Population - Census Blocks
+```{r}
+MA_latinx_palette <- colorNumeric(c("lightpink", "yellow"), boston_latinx$pct_latinx)
+
+latinx_map_TRACT <- leaflet(boston_latinx) %>%
+  addProviderTiles("Stamen.TonerLite") %>%
+  addPolygons(color = ~MA_latinx_palette(pct_latinx), stroke = FALSE, fillOpacity = 0.7,
+              highlightOptions = highlightOptions(fillColor = "orange", fillOpacity = 0.9),
+              label = boston_latinx$NAME,
+               popup = paste("Total population: ", boston_latinx$tot_pop, "<br/>",
+                            "Latinx population: ", boston_latinx$la_pop, " (", 
+                            round(boston_latinx$pct_latinx * 100, 1), "%)", sep = "")) %>%
+  addLegend("bottomright", pal = MA_latinx_palette, values = ~pct_latinx,
+    title = "Percent of population<br/>identifying as Hispanic or Latinx",
+    labFormat = labelFormat(suffix = "%",
+                            transform = function(x) 100 * x),
+    opacity = 1)
+
+latinx_map_TRACT
+```
+
+```{r}
+saveWidget(latinx_map_TRACT, file="latinx_map_BLOCK.html")
+```
+
+
+```{r}
+medianlatinx_Suffolk <- get_acs(geography = "tract", county = "Suffolk", state = "MA", 
+                           year = 2019, survey = "acs5",
+                           variables = c(latinx_income = "B19013I_001"),
+                           output = "wide", geometry = TRUE) 
+```
+
+```{r}
+medianlatinx_Suffolk <- medianlatinx_Suffolk %>%
+  select(-latinx_incomeM) %>%
+  filter(latinx_incomeE > 0)
+```
+
+
+```{r}
+income_palette <- colorNumeric(c("purple", "lightblue"),
+                                medianlatinx_Suffolk$latinx_incomeE)
+
+medianincome_map <- leaflet(medianlatinx_Suffolk) %>%
+  addProviderTiles("Stamen.TonerLite") %>%
+  addPolygons(fillColor = ~income_palette(latinx_incomeE), weight = 1, color = "gray", fillOpacity = 0.7,
+              highlightOptions = highlightOptions(fillColor = "yellow", fillOpacity = 0.9),
+              label = medianlatinx_Suffolk$NAME,
+              popup = paste("Median Income: ", medianlatinx_Suffolk$latinx_incomeE, "<br/>")) %>%
+    addLegend("bottomright", pal = income_palette, values = ~latinx_incomeE,
+    title = "Median Household Income<br/>for Latinx Household",
+    labFormat = labelFormat(suffix = "$"),
+    opacity = 1)
+
+medianincome_map
+```
+
+
+```{r}
+saveWidget(medianincome_map, file="medianincome_map_TRACT.html")
+```
+
+
+```{r}
+latinx_pop_Suffolk <- get_acs(geography = "tract", county = "Suffolk", state = "MA", 
+                           year = 2019, survey = "acs5",
+                           variables = c(tot_pop = "B01003_001", latinx_pop = "B03001_001"),
+                           output = "wide", geometry = TRUE) 
+```
+
+```{r}
+latinx_pop_Suffolk <- latinx_pop_Suffolk %>%
+  filter(tot_popE > 0) %>%
+  mutate(pct_latinx = round(100 * latinx_popE / tot_popE, 1))
+```
+
+```{r}
+latinx_pop_palette <- colorNumeric(c("lightpink", "yellow"),
+                                latinx_pop_Suffolk$pct_latinx)
+
+latinx_pop_map <- leaflet(latinx_pop_Suffolk) %>%
+  addProviderTiles("Stamen.TonerLite") %>%
+  addPolygons(fillColor = ~latinx_pop_palette(pct_latinx), weight = 1, color = "gray", fillOpacity = 0.7,
+              highlightOptions = highlightOptions(fillColor = "yellow", fillOpacity = 0.9),
+              label = latinx_pop_Suffolk$NAME,
+              popup = paste("Total workers: ", latinx_pop_Suffolk$tot_popE, "<br/>",
+                            "Transit commuters: ", latinx_pop_Suffolk$latinx_popE, " (", 
+                            latinx_pop_Suffolk$pct_latinx, "%)", sep = "")) %>%
+    addLegend("bottomright", pal = latinx_pop_palette, values = ~pct_latinx,
+    title = "Percent of population<br/>identifying as Hispanic/Latinx",
+    labFormat = labelFormat(suffix = "%"),
+    opacity = 1)
+
+latinx_pop_map
 ```
 
